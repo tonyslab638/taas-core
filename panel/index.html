@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TaaS – Brand Panel</title>
+  <style>
+    body { font-family: Arial; background:#111; color:#fff; padding:40px; }
+    .box { max-width:400px; margin:auto; background:#1c1c1c; padding:20px; border-radius:12px; }
+    input, button {
+      width:100%; padding:10px; margin:6px 0;
+      border-radius:6px; border:none;
+    }
+    button { background:#00ffcc; font-weight:bold; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Create Product</h2>
+    <input id="gpid" placeholder="GPID" />
+    <input id="brand" placeholder="Brand" />
+    <input id="model" placeholder="Model" />
+    <input id="category" placeholder="Category" />
+    <input id="factory" placeholder="Factory" />
+    <input id="batch" placeholder="Batch" />
+    <button onclick="create()">Create Product</button>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    async function create() {
+      const data = {
+        gpid: gpid.value,
+        brand: brand.value,
+        model: model.value,
+        category: category.value,
+        factory: factory.value,
+        batch: batch.value
+      };
+
+      const res = await fetch("/api/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      const r = await res.text();
+      result.innerText = r;
+    }
+  </script>
+</body>
+</html>
