@@ -1,53 +1,70 @@
-che...
-==> Cloning from https://github.com/tonyslab638/taas-core
-==> Checking out commit 8257755d054805d7df25f1a3822f4299affbf7e1 in branch main
-==> Downloaded 318MB in 5s. Extraction took 6s.
-==> Using Node.js version 22.22.0 (default)
-==> Docs on specifying a Node.js version: https://render.com/docs/node-version
-==> Running build command 'npm install'...
-up to date, audited 650 packages in 2s
-123 packages are looking for funding
-  run `npm fund` for details
-35 vulnerabilities (22 low, 13 moderate)
-To address issues that do not require attention, run:
-  npm audit fix
-Some issues need review, and may require choosing
-a different dependency.
-Run `npm audit` for details.
-==> Uploading build...
-==> Uploaded in 8.1s. Compression took 4.2s
-==> Build successful 🎉
-==> Deploying...
-==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
-==> Running 'node server.js'
-node:fs:440
-    return binding.readFileUtf8(path, stringToFlags(options.flag));
-                   ^
-Error: ENOENT: no such file or directory, open './abi/TaaSProductBirth.json'
-    at Object.readFileSync (node:fs:440:20)
-    at file:///opt/render/project/src/panel/server.js:16:27
-    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
-  errno: -2,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: './abi/TaaSProductBirth.json'
+import express from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { ethers } from "ethers";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const PORT = process.env.PORT || 4000;
+const RPC_URL = process.env.RPC_URL;
+const PRIVATE_KEY = process.env.PANEL_PRIVATE_KEY;
+const CONTRACT_ADDR = process.env.CONTRACT_ADDR;
+
+if (!RPC_URL || !PRIVATE_KEY || !CONTRACT_ADDR) {
+  console.error("❌ Missing environment variables.");
+  console.error("Required: RPC_URL, PANEL_PRIVATE_KEY, CONTRACT_ADDR");
+  process.exit(1);
 }
-Node.js v22.22.0
-==> Running 'node server.js'
-node:fs:440
-    return binding.readFileUtf8(path, stringToFlags(options.flag));
-                   ^
-Error: ENOENT: no such file or directory, open './abi/TaaSProductBirth.json'
-    at Object.readFileSync (node:fs:440:20)
-    at file:///opt/render/project/src/panel/server.js:16:27
-    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
-  errno: -2,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: './abi/TaaSProductBirth.json'
+
+let abi;
+try {
+  const abiPath = path.join(__dirname, "..", "abi", "TaaSProductBirth.json");
+  abi = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+} catch (e) {
+  console.error("❌ ABI file not found at /abi/TaaSProductBirth.json");
+  console.error(e.message);
+  process.exit(1);
 }
-Node.js v22.22.0
+
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const contract = new ethers.Contract(CONTRACT_ADDR, abi, wallet);
+
+const app = express();
+app.use(express.json());
+app.use(express.static(path.join(__dirname)));
+
+app.get("/health", (req, res) => {
+  res.send("ASJUJ Panel Online");
+});
+
+app.post("/create", async (req, res) => {
+  try {
+    const { gpid, brand, model, category, factory, batch } = req.body;
+    const hash = ethers.id(`${gpid}-${Date.now()}`);
+
+    const tx = await contract.birthProduct(
+      gpid,
+      brand,
+      model,
+      category,
+      factory,
+      batch,
+      hash
+    );
+
+    await tx.wait();
+
+    res.json({ ok: true, tx: tx.hash });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Brand Panel running on port ${PORT}`);
+  console.log(`Connected to chain via RPC`);
+});
