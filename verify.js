@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 
 // Polygon Amoy via Alchemy
 const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
-const CONTRACT_ADDRESS = "0x1b6b586Fb50D442830DB5D481407fe4066c7A3BE";
+const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
 
 // Load ABI from /abi folder
 const artifact = JSON.parse(
