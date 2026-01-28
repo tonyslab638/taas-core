@@ -1,30 +1,59 @@
 import express from "express";
+import bodyParser from "body-parser";
 import fs from "fs";
-import QRCode from "qrcode";
+import path from "path";
+import { fileURLToPath } from "url";
 import { ethers } from "ethers";
 
-const app = express();
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static("panel"));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const RPC = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
-const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
+// ===== CONFIG =====
+const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
+const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a"; // your latest Amoy contract
 
-const provider = new ethers.JsonRpcProvider(RPC);
-const wallet = "ad622e40696eeb98115816682d004bfda83d2555d87b664e8a56aa4bb787b7fe";
+// Read PRIVATE KEY from environment (Render -> Environment Variables)
+const PRIVATE_KEY = process.env.PANEL_PRIVATE_KEY;
 
-const abi = JSON.parse(fs.readFileSync("./abi/TaaSProductBirth.json", "utf8"));
+if (!PRIVATE_KEY) {
+  console.error("❌ PANEL_PRIVATE_KEY not set in environment variables");
+  process.exit(1);
+}
+
+// Load ABI safely (from project root /abi)
+const abiPath = path.join(__dirname, "../abi/TaaSProductBirth.json");
+const abi = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+
+// ===== BLOCKCHAIN SETUP =====
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, wallet);
 
-(async () => {
-  const net = await provider.getNetwork();
-  console.log("PANEL USING CONTRACT:", CONTRACT_ADDRESS);
-  console.log("PANEL CHAIN ID:", net.chainId.toString());
-})();
+// ===== SERVER =====
+const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+// Simple UI
+app.get("/", (req, res) => {
+  res.send(`
+    <h2>Create Product</h2>
+    <form method="POST" action="/create">
+      <input name="gpid" placeholder="GPID" required /><br/>
+      <input name="brand" placeholder="Brand" required /><br/>
+      <input name="model" placeholder="Model" required /><br/>
+      <input name="category" placeholder="Category" required /><br/>
+      <input name="factory" placeholder="Factory" required /><br/>
+      <input name="batch" placeholder="Batch" required /><br/>
+      <button>Create Product</button>
+    </form>
+  `);
+});
 
 app.post("/create", async (req, res) => {
   try {
     const { gpid, brand, model, category, factory, batch } = req.body;
+    const hash = ethers.id(`${gpid}-${Date.now()}`);
 
     const tx = await contract.birthProduct(
       gpid,
@@ -33,20 +62,19 @@ app.post("/create", async (req, res) => {
       category,
       factory,
       batch,
-      ethers.id(gpid)
+      hash
     );
 
     await tx.wait();
 
-    const file = `panel/${gpid}.png`;
-    await QRCode.toFile(file, `https://taas-verify.onrender.com/product/${gpid}`);
-
-    res.send(`Product created on Polygon. QR saved as ${gpid}.png`);
-  } catch (e) {
-    res.send("Error: " + e.message);
+    res.send(`Product created on Polygon Amoy.<br/>GPID: ${gpid}`);
+  } catch (err) {
+    res.status(500).send("Error: " + err.message);
   }
 });
 
-app.listen(4000, () => {
-  console.log("Brand Panel running at http://localhost:4000");
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Brand Panel running on port ${PORT}`);
+  console.log("Connected to Polygon Amoy");
 });
