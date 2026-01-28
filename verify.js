@@ -1,79 +1,87 @@
+// verify.js – ASJUJ Trust Verifier (Read-Only)
+
 import express from "express";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { ethers } from "ethers";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ===== CONFIG =====
+const RPC_URL = process.env.RPC_URL || "https://polygon-amoy.g.alchemy.com/v2/YOUR_KEY";
+const CONTRACT_ADDR = process.env.CONTRACT_ADDR || "0xYourContract";
+
+// ===== LOAD ABI SAFELY =====
+const abiPath = path.join(__dirname, "abi", "TaaSProductBirth.json");
+const raw = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+const ABI = Array.isArray(raw) ? raw : raw.abi; // supports both formats
+
+// ===== ETHERS SETUP (READ ONLY) =====
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const contract = new ethers.Contract(CONTRACT_ADDR, ABI, provider);
+
+// ===== SERVER =====
 const app = express();
 
-// ================= CONFIG =================
-const PORT = process.env.PORT || 10000;
-
-// Polygon Amoy RPC (Alchemy)
-const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
-
-// Your latest deployed contract on Amoy
-const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
-
-// Load ABI correctly
-const artifact = JSON.parse(
-  fs.readFileSync("./abi/TaaSProductBirth.json", "utf8")
-);
-const ABI = artifact.abi;
-
-// Setup provider & contract
-const provider = new ethers.JsonRpcProvider(RPC_URL);
-const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-
-// ================= ROUTES =================
-app.get("/", (req, res) => {
-  res.send("TaaS Verifier Running");
+app.get("/", (_, res) => {
+  res.send(`
+    <html>
+      <head><title>ASJUJ Verify</title></head>
+      <body style="font-family:Arial;text-align:center;margin-top:80px">
+        <h1>ASJUJ Network</h1>
+        <p>Append a Product ID in URL</p>
+        <p>Example: <code>/TAAS-LIVE-9003</code></p>
+      </body>
+    </html>
+  `);
 });
 
-app.get("/product/:gpid", async (req, res) => {
-  const { gpid } = req.params;
+app.get("/:gpid", async (req, res) => {
+  const gpid = req.params.gpid;
 
   try {
-    const p = await contract.getProduct(gpid);
-
-    if (!p || !p[0]) {
-      return res.status(404).send("Product not found or invalid");
-    }
+    const data = await contract.getProduct(gpid);
 
     const html = `
       <html>
-        <head>
-          <title>TaaS Verification</title>
-          <style>
-            body { font-family: Arial; padding: 40px; background: #0f172a; color: #e5e7eb; }
-            .box { max-width: 600px; margin: auto; background: #020617; padding: 24px; border-radius: 12px; }
-            h1 { color: #22c55e; }
-            p { line-height: 1.6; }
-          </style>
-        </head>
-        <body>
-          <div class="box">
-            <h1>Product Verified</h1>
-            <p><b>GPID:</b> ${p[0]}</p>
-            <p><b>Brand:</b> ${p[1]}</p>
-            <p><b>Model:</b> ${p[2]}</p>
-            <p><b>Category:</b> ${p[3]}</p>
-            <p><b>Factory:</b> ${p[4]}</p>
-            <p><b>Batch:</b> ${p[5]}</p>
-            <p><b>Born:</b> ${new Date(Number(p[6]) * 1000).toUTCString()}</p>
-            <p><b>Issuer:</b> ${p[7]}</p>
-            <p><b>Hash:</b> ${p[8]}</p>
-          </div>
-        </body>
+      <head>
+        <title>ASJUJ – ${gpid}</title>
+      </head>
+      <body style="font-family:Arial;background:#0a0a0a;color:white;text-align:center;padding:40px">
+        <h1 style="color:#00ff99">AUTHENTIC PRODUCT</h1>
+        <h2>${gpid}</h2>
+        <hr style="margin:30px 0"/>
+
+        <p><b>Brand:</b> ${data.brand}</p>
+        <p><b>Model:</b> ${data.model}</p>
+        <p><b>Category:</b> ${data.category}</p>
+        <p><b>Factory:</b> ${data.factoryUnit}</p>
+        <p><b>Batch:</b> ${data.batch}</p>
+        <p><b>Born:</b> ${new Date(Number(data.birth) * 1000).toUTCString()}</p>
+        <p><b>Issuer:</b> ${data.issuer}</p>
+
+        <br/>
+        <h3 style="color:#00ff99">Verified by ASJUJ Network</h3>
+      </body>
       </html>
     `;
 
     res.send(html);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Product not found or invalid");
+  } catch (e) {
+    res.send(`
+      <html>
+        <body style="font-family:Arial;text-align:center;margin-top:80px">
+          <h1 style="color:red">FAKE / INVALID PRODUCT</h1>
+          <p>No such product exists on ASJUJ Network</p>
+        </body>
+      </html>
+    `);
   }
 });
 
-// ================= START =================
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Verification server running on port ${PORT}`);
+  console.log("ASJUJ Verifier running on port", PORT);
 });
