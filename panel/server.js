@@ -7,60 +7,63 @@ import { ethers } from "ethers";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 4000;
+// ---- ENV ----
 const RPC_URL = process.env.RPC_URL;
-const CONTRACT_ADDR = process.env.CONTRACT_ADDR;
 const PRIVATE_KEY = process.env.PANEL_PRIVATE_KEY;
+const CONTRACT_ADDR = process.env.CONTRACT_ADDR;
 
-if (!RPC_URL || !CONTRACT_ADDR || !PRIVATE_KEY) {
-  console.error("❌ Missing environment variables.");
-  console.error("Required: RPC_URL, CONTRACT_ADDR, PANEL_PRIVATE_KEY");
+if (!RPC_URL || !PRIVATE_KEY || !CONTRACT_ADDR) {
+  console.error("Missing environment variables");
   process.exit(1);
 }
 
-// Load ABI safely
+// ---- ABI LOAD (safe) ----
+const abiPath = path.join(__dirname, "..", "abi", "TaaSProductBirth.json");
+
 let abi;
 try {
-  const abiPath = path.join(__dirname, "..", "abi", "TaaSProductBirth.json");
-  const artifact = JSON.parse(fs.readFileSync(abiPath, "utf8"));
-  abi = artifact.abi;
-  if (!Array.isArray(abi)) throw new Error("ABI is not an array");
-} catch (err) {
-  console.error("❌ Failed to load ABI:", err.message);
+  const raw = fs.readFileSync(abiPath, "utf8");
+  const parsed = JSON.parse(raw);
+  abi = parsed.abi || parsed; // supports both formats
+} catch (e) {
+  console.error("Failed to load ABI:", e.message);
   process.exit(1);
 }
 
-// Blockchain setup
+// ---- CHAIN ----
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDR, abi, wallet);
 
-// Express app
+// ---- SERVER ----
 const app = express();
+const PORT = process.env.PORT || 10000;
+
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(__dirname));
 
-app.post("/create", async (req, res) => {
+// Serve panel UI
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// Create product
+app.post("/api/create", async (req, res) => {
   try {
-    const {
+    const { gpid, brand, model, category, factory, batch } = req.body;
+
+    if (!gpid || !brand || !model) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const tx = await contract.createProduct(
       gpid,
       brand,
       model,
-      category,
-      factory,
-      batch
-    } = req.body;
-
-    const hash = ethers.id(`${brand}-${model}-${gpid}`);
-
-    const tx = await contract.birthProduct(
-      gpid,
-      brand,
-      model,
-      category,
-      factory,
-      batch,
-      hash
+      category || "",
+      factory || "",
+      batch || ""
     );
 
     await tx.wait();
@@ -70,12 +73,15 @@ app.post("/create", async (req, res) => {
       gpid,
       tx: tx.hash
     });
-  } catch (e) {
-    res.status(400).json({
-      success: false,
-      error: e.reason || e.message
-    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
+});
+
+// Health
+app.get("/health", (_, res) => {
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {
