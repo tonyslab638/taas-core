@@ -1,80 +1,53 @@
-import express from "express";
-import bodyParser from "body-parser";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { ethers } from "ethers";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ===== CONFIG =====
-const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
-const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a"; // your latest Amoy contract
-
-// Read PRIVATE KEY from environment (Render -> Environment Variables)
-const PRIVATE_KEY = process.env.PANEL_PRIVATE_KEY;
-
-if (!PRIVATE_KEY) {
-  console.error("❌ PANEL_PRIVATE_KEY not set in environment variables");
-  process.exit(1);
+che...
+==> Cloning from https://github.com/tonyslab638/taas-core
+==> Checking out commit 8257755d054805d7df25f1a3822f4299affbf7e1 in branch main
+==> Downloaded 318MB in 5s. Extraction took 6s.
+==> Using Node.js version 22.22.0 (default)
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Running build command 'npm install'...
+up to date, audited 650 packages in 2s
+123 packages are looking for funding
+  run `npm fund` for details
+35 vulnerabilities (22 low, 13 moderate)
+To address issues that do not require attention, run:
+  npm audit fix
+Some issues need review, and may require choosing
+a different dependency.
+Run `npm audit` for details.
+==> Uploading build...
+==> Uploaded in 8.1s. Compression took 4.2s
+==> Build successful 🎉
+==> Deploying...
+==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+==> Running 'node server.js'
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+Error: ENOENT: no such file or directory, open './abi/TaaSProductBirth.json'
+    at Object.readFileSync (node:fs:440:20)
+    at file:///opt/render/project/src/panel/server.js:16:27
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: './abi/TaaSProductBirth.json'
 }
-
-// Load ABI safely (from project root /abi)
-const abiPath = path.join(__dirname, "../abi/TaaSProductBirth.json");
-const abi = JSON.parse(fs.readFileSync(abiPath, "utf8"));
-
-// ===== BLOCKCHAIN SETUP =====
-const provider = new ethers.JsonRpcProvider(RPC_URL);
-const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, wallet);
-
-// ===== SERVER =====
-const app = express();
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-// Simple UI
-app.get("/", (req, res) => {
-  res.send(`
-    <h2>Create Product</h2>
-    <form method="POST" action="/create">
-      <input name="gpid" placeholder="GPID" required /><br/>
-      <input name="brand" placeholder="Brand" required /><br/>
-      <input name="model" placeholder="Model" required /><br/>
-      <input name="category" placeholder="Category" required /><br/>
-      <input name="factory" placeholder="Factory" required /><br/>
-      <input name="batch" placeholder="Batch" required /><br/>
-      <button>Create Product</button>
-    </form>
-  `);
-});
-
-app.post("/create", async (req, res) => {
-  try {
-    const { gpid, brand, model, category, factory, batch } = req.body;
-    const hash = ethers.id(`${gpid}-${Date.now()}`);
-
-    const tx = await contract.birthProduct(
-      gpid,
-      brand,
-      model,
-      category,
-      factory,
-      batch,
-      hash
-    );
-
-    await tx.wait();
-
-    res.send(`Product created on Polygon Amoy.<br/>GPID: ${gpid}`);
-  } catch (err) {
-    res.status(500).send("Error: " + err.message);
-  }
-});
-
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Brand Panel running on port ${PORT}`);
-  console.log("Connected to Polygon Amoy");
-});
+Node.js v22.22.0
+==> Running 'node server.js'
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+Error: ENOENT: no such file or directory, open './abi/TaaSProductBirth.json'
+    at Object.readFileSync (node:fs:440:20)
+    at file:///opt/render/project/src/panel/server.js:16:27
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: './abi/TaaSProductBirth.json'
+}
+Node.js v22.22.0
