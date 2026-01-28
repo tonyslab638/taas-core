@@ -11,7 +11,7 @@ const RPC = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
 const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
 
 const provider = new ethers.JsonRpcProvider(RPC);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const wallet = "ad622e40696eeb98115816682d004bfda83d2555d87b664e8a56aa4bb787b7fe";
 
 const abi = JSON.parse(fs.readFileSync("./abi/TaaSProductBirth.json", "utf8"));
 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, wallet);
