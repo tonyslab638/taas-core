@@ -1,4 +1,5 @@
 import express from "express";
+import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,57 +14,55 @@ const PRIVATE_KEY = process.env.PANEL_PRIVATE_KEY;
 const CONTRACT_ADDR = process.env.CONTRACT_ADDR;
 
 if (!RPC_URL || !PRIVATE_KEY || !CONTRACT_ADDR) {
-  console.error("Missing environment variables");
+  console.error("Missing environment variables.");
   process.exit(1);
 }
 
-// ---- ABI LOAD (safe) ----
-const abiPath = path.join(__dirname, "..", "abi", "TaaSProductBirth.json");
-
-let abi;
-try {
-  const raw = fs.readFileSync(abiPath, "utf8");
-  const parsed = JSON.parse(raw);
-  abi = parsed.abi || parsed; // supports both formats
-} catch (e) {
-  console.error("Failed to load ABI:", e.message);
+// ---- LOAD ABI ----
+const abiPath = path.join(__dirname, "../abi/TaaSProductBirth.json");
+if (!fs.existsSync(abiPath)) {
+  console.error("ABI file not found at:", abiPath);
   process.exit(1);
 }
 
-// ---- CHAIN ----
+const abiJson = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+const ABI = abiJson.abi || abiJson;
+
+// ---- ETHERS ----
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-const contract = new ethers.Contract(CONTRACT_ADDR, abi, wallet);
+const contract = new ethers.Contract(CONTRACT_ADDR, ABI, wallet);
 
-// ---- SERVER ----
+// ---- APP ----
 const app = express();
-const PORT = process.env.PORT || 10000;
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname)));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
-
-// Serve panel UI
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-// Create product
 app.post("/api/create", async (req, res) => {
   try {
-    const { gpid, brand, model, category, factory, batch } = req.body;
-
-    if (!gpid || !brand || !model) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    const tx = await contract.createProduct(
+    const {
       gpid,
       brand,
       model,
-      category || "",
-      factory || "",
-      batch || ""
+      category,
+      factory,
+      batch
+    } = req.body;
+
+    if (!gpid || !brand || !model || !category || !factory || !batch) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    const hash = ethers.id(gpid + brand + model + Date.now());
+
+    const tx = await contract.birthProduct(
+      gpid,
+      brand,
+      model,
+      category,
+      factory,
+      batch,
+      hash
     );
 
     await tx.wait();
@@ -73,18 +72,17 @@ app.post("/api/create", async (req, res) => {
       gpid,
       tx: tx.hash
     });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: err.reason || err.message || "Transaction failed"
+    });
   }
 });
 
-// Health
-app.get("/health", (_, res) => {
-  res.json({ ok: true });
-});
-
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Brand Panel running on port ${PORT}`);
-  console.log(`Connected to contract ${CONTRACT_ADDR}`);
+  console.log("Brand Panel running on port", PORT);
+  console.log("Connected to contract", CONTRACT_ADDR);
 });
