@@ -4,47 +4,42 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// ---- CONFIG (HARD WIRED FOR NOW – DEMO MODE) ----
-const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
-const CONTRACT_ADDR = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
-const PORT = process.env.PORT || 10000;
-
-// ---- LOAD ABI SAFELY ----
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const abiPath = path.join(__dirname, "abi", "TaaSProductBirth.json");
 
+// === CONFIG ===
+const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
+const CONTRACT_ADDR = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
+
+// Load ABI safely
+const abiPath = path.join(__dirname, "abi", "TaaSProductBirth.json");
 const abiJson = JSON.parse(fs.readFileSync(abiPath, "utf8"));
 const ABI = abiJson.abi || abiJson;
 
-// ---- CHAIN SETUP ----
+// Setup blockchain
 const provider = new JsonRpcProvider(RPC_URL);
 const contract = new Contract(CONTRACT_ADDR, ABI, provider);
 
-// ---- SERVER ----
+// Server
 const app = express();
+const PORT = process.env.PORT || 10000;
 
 app.get("/", (req, res) => {
   res.send(`
     <html>
-      <head><title>ASJUJ Verifier</title></head>
-      <body style="font-family:sans-serif;background:#0f0f14;color:white;text-align:center;padding-top:80px">
-        <h1>ASJUJ Trust Network</h1>
-        <p>Append a GPID in URL</p>
-        <code>https://taas-verify.onrender.com/TAAS-LIVE-9003</code>
+      <body style="font-family:sans-serif;background:#0f0f14;color:white;padding:40px">
+        <h1>ASJUJ Verifier</h1>
+        <p>Scan a product QR or open /GPID</p>
       </body>
     </html>
   `);
 });
 
 app.get("/:gpid", async (req, res) => {
-  try {
-    const gpid = req.params.gpid;
-    const data = await contract.getProduct(gpid);
+  const gpid = req.params.gpid;
 
-    if (!data || !data.exists) {
-      return res.send("<h2>❌ Product not found</h2>");
-    }
+  try {
+    const data = await contract.getProduct(gpid);
 
     res.send(`
       <html>
@@ -60,13 +55,18 @@ app.get("/:gpid", async (req, res) => {
         </body>
       </html>
     `);
-  } catch (e) {
-    res.send(`<h2>⚠ Error: ${e.message}</h2>`);
+  } catch (err) {
+    res.send(`
+      <html>
+        <body style="font-family:sans-serif;background:#0f0f14;color:white;padding:40px">
+          <h1>❌ Product Not Found</h1>
+          <p>This GPID is not registered on ASJUJ Network.</p>
+        </body>
+      </html>
+    `);
   }
 });
 
 app.listen(PORT, () => {
   console.log("ASJUJ Verifier running on port", PORT);
-  console.log("RPC:", RPC_URL);
-  console.log("Contract:", CONTRACT_ADDR);
 });
