@@ -11,7 +11,7 @@ app.use(express.static(__dirname));
 
 // ====== BLOCKCHAIN CONFIG ======
 const RPC_URL = "https://rpc-amoy.polygon.technology";
-const CONTRACT_ADDRESS = "0x1b6b586Fb50D442830DB5D481407fe4066c7A3BE";
+const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
 
 // Use your MetaMask Amoy private key here (ONLY LOCALLY)
 const PRIVATE_KEY = "ad622e40696eeb98115816682d004bfda83d2555d87b664e8a56aa4bb787b7fe";
