@@ -17,7 +17,7 @@ app.get("/", (req, res) => {
 });
 
 // ================== CONFIG (EDIT ONLY THESE) ==================
-const RPC_URL = "https://polygon-mainnet.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
+const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
 const PRIVATE_KEY = "0xad622e40696eeb98115816682d004bfda83d2555d87b664e8a56aa4bb787b7fe";
 const CONTRACT_ADDR = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
 // ===============================================================
