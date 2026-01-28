@@ -3,59 +3,127 @@ pragma solidity ^0.8.20;
 
 contract TaaSProductBirth {
 
-    struct ProductBirth {
+    struct Product {
         string gpid;
         string brand;
         string model;
         string category;
         string factory;
         string batch;
-        uint256 createdAt;
-        address creator;
-        bytes32 fingerprint;
+        uint256 bornAt;
+        address issuer;
+        bytes32 hash;
     }
 
-    mapping(string => ProductBirth) private products;
+    mapping(string => Product) private products;
+    mapping(string => bool) public exists;
 
-    event ProductBorn(
-        string gpid,
-        string brand,
-        string model,
-        address creator
-    );
+    // Ownership & Security
+    mapping(string => address) public owner;
+    mapping(string => bool) public stolen;
 
+    address public admin;
+
+    constructor() {
+        admin = msg.sender;
+    }
+
+    modifier onlyOwner(string memory gpid) {
+        require(owner[gpid] == msg.sender, "Not owner");
+        _;
+    }
+
+    // ===== CORE BIRTH =====
     function birthProduct(
-        string memory _gpid,
-        string memory _brand,
-        string memory _model,
-        string memory _category,
-        string memory _factory,
-        string memory _batch,
-        bytes32 _fingerprint
+        string memory gpid,
+        string memory brand,
+        string memory model,
+        string memory category,
+        string memory factory,
+        string memory batch,
+        bytes32 hash
     ) public {
-        require(bytes(products[_gpid].gpid).length == 0, "Already exists");
+        require(!exists[gpid], "Already exists");
 
-        products[_gpid] = ProductBirth({
-            gpid: _gpid,
-            brand: _brand,
-            model: _model,
-            category: _category,
-            factory: _factory,
-            batch: _batch,
-            createdAt: block.timestamp,
-            creator: msg.sender,
-            fingerprint: _fingerprint
+        products[gpid] = Product({
+            gpid: gpid,
+            brand: brand,
+            model: model,
+            category: category,
+            factory: factory,
+            batch: batch,
+            bornAt: block.timestamp,
+            issuer: msg.sender,
+            hash: hash
         });
 
-        emit ProductBorn(_gpid, _brand, _model, msg.sender);
+        exists[gpid] = true;
     }
 
-    function getProduct(string memory _gpid)
-        public
-        view
-        returns (ProductBirth memory)
-    {
-        require(bytes(products[_gpid].gpid).length != 0, "Not found");
-        return products[_gpid];
+    // ===== READ LAYERS =====
+
+    function getCore(string memory gpid) public view returns (
+        string memory,
+        string memory,
+        string memory,
+        string memory,
+        string memory,
+        string memory
+    ) {
+        require(exists[gpid], "Not found");
+        Product memory p = products[gpid];
+        return (
+            p.gpid,
+            p.brand,
+            p.model,
+            p.category,
+            p.factory,
+            p.batch
+        );
+    }
+
+    function getMeta(string memory gpid) public view returns (
+        uint256,
+        address,
+        bytes32
+    ) {
+        require(exists[gpid], "Not found");
+        Product memory p = products[gpid];
+        return (
+            p.bornAt,
+            p.issuer,
+            p.hash
+        );
+    }
+
+    function getState(string memory gpid) public view returns (
+        address,
+        bool
+    ) {
+        require(exists[gpid], "Not found");
+        return (
+            owner[gpid],
+            stolen[gpid]
+        );
+    }
+
+    // ===== OWNERSHIP =====
+
+    function assignOwner(string memory gpid, address newOwner) public {
+        require(exists[gpid], "Not found");
+        require(owner[gpid] == address(0), "Already owned");
+        owner[gpid] = newOwner;
+    }
+
+    function transferOwner(string memory gpid, address newOwner) public onlyOwner(gpid) {
+        owner[gpid] = newOwner;
+    }
+
+    function markStolen(string memory gpid) public onlyOwner(gpid) {
+        stolen[gpid] = true;
+    }
+
+    function clearStolen(string memory gpid) public onlyOwner(gpid) {
+        stolen[gpid] = false;
     }
 }

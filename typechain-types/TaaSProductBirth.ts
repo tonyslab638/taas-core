@@ -3,12 +3,10 @@
 /* eslint-disable */
 import type {
   BaseContract,
-  BigNumberish,
   BytesLike,
   FunctionFragment,
   Result,
   Interface,
-  EventFragment,
   AddressLike,
   ContractRunner,
   ContractMethod,
@@ -18,88 +16,73 @@ import type {
   TypedContractEvent,
   TypedDeferredTopicFilter,
   TypedEventLog,
-  TypedLogDescription,
   TypedListener,
   TypedContractMethod,
 } from "./common";
 
-export declare namespace TaaSProductBirth {
-  export type ProductBirthStruct = {
-    gpid: string;
-    brand: string;
-    model: string;
-    category: string;
-    factory: string;
-    batch: string;
-    createdAt: BigNumberish;
-    creator: AddressLike;
-    fingerprint: BytesLike;
-  };
-
-  export type ProductBirthStructOutput = [
-    gpid: string,
-    brand: string,
-    model: string,
-    category: string,
-    factory: string,
-    batch: string,
-    createdAt: bigint,
-    creator: string,
-    fingerprint: string
-  ] & {
-    gpid: string;
-    brand: string;
-    model: string;
-    category: string;
-    factory: string;
-    batch: string;
-    createdAt: bigint;
-    creator: string;
-    fingerprint: string;
-  };
-}
-
 export interface TaaSProductBirthInterface extends Interface {
-  getFunction(nameOrSignature: "birthProduct" | "getProduct"): FunctionFragment;
+  getFunction(
+    nameOrSignature:
+      | "admin"
+      | "assignOwner"
+      | "birthProduct"
+      | "clearStolen"
+      | "exists"
+      | "getCore"
+      | "getMeta"
+      | "getState"
+      | "markStolen"
+      | "owner"
+      | "stolen"
+      | "transferOwner"
+  ): FunctionFragment;
 
-  getEvent(nameOrSignatureOrTopic: "ProductBorn"): EventFragment;
-
+  encodeFunctionData(functionFragment: "admin", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "assignOwner",
+    values: [string, AddressLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "birthProduct",
     values: [string, string, string, string, string, string, BytesLike]
   ): string;
-  encodeFunctionData(functionFragment: "getProduct", values: [string]): string;
+  encodeFunctionData(functionFragment: "clearStolen", values: [string]): string;
+  encodeFunctionData(functionFragment: "exists", values: [string]): string;
+  encodeFunctionData(functionFragment: "getCore", values: [string]): string;
+  encodeFunctionData(functionFragment: "getMeta", values: [string]): string;
+  encodeFunctionData(functionFragment: "getState", values: [string]): string;
+  encodeFunctionData(functionFragment: "markStolen", values: [string]): string;
+  encodeFunctionData(functionFragment: "owner", values: [string]): string;
+  encodeFunctionData(functionFragment: "stolen", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "transferOwner",
+    values: [string, AddressLike]
+  ): string;
 
+  decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "assignOwner",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "birthProduct",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "getProduct", data: BytesLike): Result;
-}
-
-export namespace ProductBornEvent {
-  export type InputTuple = [
-    gpid: string,
-    brand: string,
-    model: string,
-    creator: AddressLike
-  ];
-  export type OutputTuple = [
-    gpid: string,
-    brand: string,
-    model: string,
-    creator: string
-  ];
-  export interface OutputObject {
-    gpid: string;
-    brand: string;
-    model: string;
-    creator: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+  decodeFunctionResult(
+    functionFragment: "clearStolen",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "exists", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "getCore", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "getMeta", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "getState", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "markStolen", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "stolen", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "transferOwner",
+    data: BytesLike
+  ): Result;
 }
 
 export interface TaaSProductBirth extends BaseContract {
@@ -145,24 +128,56 @@ export interface TaaSProductBirth extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  admin: TypedContractMethod<[], [string], "view">;
+
+  assignOwner: TypedContractMethod<
+    [gpid: string, newOwner: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
   birthProduct: TypedContractMethod<
     [
-      _gpid: string,
-      _brand: string,
-      _model: string,
-      _category: string,
-      _factory: string,
-      _batch: string,
-      _fingerprint: BytesLike
+      gpid: string,
+      brand: string,
+      model: string,
+      category: string,
+      factory: string,
+      batch: string,
+      hash: BytesLike
     ],
     [void],
     "nonpayable"
   >;
 
-  getProduct: TypedContractMethod<
-    [_gpid: string],
-    [TaaSProductBirth.ProductBirthStructOutput],
+  clearStolen: TypedContractMethod<[gpid: string], [void], "nonpayable">;
+
+  exists: TypedContractMethod<[arg0: string], [boolean], "view">;
+
+  getCore: TypedContractMethod<
+    [gpid: string],
+    [[string, string, string, string, string, string]],
     "view"
+  >;
+
+  getMeta: TypedContractMethod<
+    [gpid: string],
+    [[bigint, string, string]],
+    "view"
+  >;
+
+  getState: TypedContractMethod<[gpid: string], [[string, boolean]], "view">;
+
+  markStolen: TypedContractMethod<[gpid: string], [void], "nonpayable">;
+
+  owner: TypedContractMethod<[arg0: string], [string], "view">;
+
+  stolen: TypedContractMethod<[arg0: string], [boolean], "view">;
+
+  transferOwner: TypedContractMethod<
+    [gpid: string, newOwner: AddressLike],
+    [void],
+    "nonpayable"
   >;
 
   getFunction<T extends ContractMethod = ContractMethod>(
@@ -170,46 +185,65 @@ export interface TaaSProductBirth extends BaseContract {
   ): T;
 
   getFunction(
+    nameOrSignature: "admin"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "assignOwner"
+  ): TypedContractMethod<
+    [gpid: string, newOwner: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "birthProduct"
   ): TypedContractMethod<
     [
-      _gpid: string,
-      _brand: string,
-      _model: string,
-      _category: string,
-      _factory: string,
-      _batch: string,
-      _fingerprint: BytesLike
+      gpid: string,
+      brand: string,
+      model: string,
+      category: string,
+      factory: string,
+      batch: string,
+      hash: BytesLike
     ],
     [void],
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "getProduct"
+    nameOrSignature: "clearStolen"
+  ): TypedContractMethod<[gpid: string], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "exists"
+  ): TypedContractMethod<[arg0: string], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "getCore"
   ): TypedContractMethod<
-    [_gpid: string],
-    [TaaSProductBirth.ProductBirthStructOutput],
+    [gpid: string],
+    [[string, string, string, string, string, string]],
     "view"
   >;
-
-  getEvent(
-    key: "ProductBorn"
-  ): TypedContractEvent<
-    ProductBornEvent.InputTuple,
-    ProductBornEvent.OutputTuple,
-    ProductBornEvent.OutputObject
+  getFunction(
+    nameOrSignature: "getMeta"
+  ): TypedContractMethod<[gpid: string], [[bigint, string, string]], "view">;
+  getFunction(
+    nameOrSignature: "getState"
+  ): TypedContractMethod<[gpid: string], [[string, boolean]], "view">;
+  getFunction(
+    nameOrSignature: "markStolen"
+  ): TypedContractMethod<[gpid: string], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "owner"
+  ): TypedContractMethod<[arg0: string], [string], "view">;
+  getFunction(
+    nameOrSignature: "stolen"
+  ): TypedContractMethod<[arg0: string], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "transferOwner"
+  ): TypedContractMethod<
+    [gpid: string, newOwner: AddressLike],
+    [void],
+    "nonpayable"
   >;
 
-  filters: {
-    "ProductBorn(string,string,string,address)": TypedContractEvent<
-      ProductBornEvent.InputTuple,
-      ProductBornEvent.OutputTuple,
-      ProductBornEvent.OutputObject
-    >;
-    ProductBorn: TypedContractEvent<
-      ProductBornEvent.InputTuple,
-      ProductBornEvent.OutputTuple,
-      ProductBornEvent.OutputObject
-    >;
-  };
+  filters: {};
 }
