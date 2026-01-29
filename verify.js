@@ -7,9 +7,10 @@ import { ethers } from "ethers";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ===== CONFIG =====
+// ================== CONFIG ==================
 const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
 const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
+// ===========================================
 
 // Load ABI
 const abiPath = path.join(__dirname, "abi", "TaaSProductBirth.json");
@@ -19,6 +20,16 @@ const ABI = abiJson.abi ?? abiJson;
 // Blockchain
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+// Boot diagnostics
+(async () => {
+  const net = await provider.getNetwork();
+  console.log("========== TAAS VERIFY BOOT ==========");
+  console.log("RPC:", RPC_URL);
+  console.log("Chain ID:", net.chainId.toString());
+  console.log("Contract:", CONTRACT_ADDRESS);
+  console.log("=====================================");
+})();
 
 // Server
 const app = express();
@@ -32,7 +43,7 @@ app.get("/", (req, res) => {
         <h1>ASJUJ Trust Network</h1>
         <p>Verify any ASJUJ product by GPID:</p>
         <form method="GET" action="/verify">
-          <input name="gpid" placeholder="ASJUJ-REAL-0001" style="padding:10px;font-size:16px"/>
+          <input name="gpid" placeholder="ASJUJ-LIVE-0010" style="padding:10px;font-size:16px"/>
           <button style="padding:10px 16px;font-size:16px">Verify</button>
         </form>
       </body>
@@ -42,9 +53,28 @@ app.get("/", (req, res) => {
 
 app.get("/verify", async (req, res) => {
   const gpid = (req.query.gpid || "").trim();
-  if (!gpid) return res.send("<h2>Invalid GPID</h2>");
+  if (!gpid) {
+    return res.send("<h2>Invalid GPID</h2>");
+  }
 
   try {
+    // 🔎 Absolute ground truth
+    const exists = await contract.exists(gpid);
+
+    if (!exists) {
+      return res.send(`
+        <html>
+          <body style="font-family:Arial;padding:40px;background:#1a0b0b;color:#fff">
+            <h1>❌ Product Not Found</h1>
+            <p>On-chain check:</p>
+            <pre>exists("${gpid}") = false</pre>
+            <p>This GPID does not exist in this contract.</p>
+          </body>
+        </html>
+      `);
+    }
+
+    // If it exists, fetch layers
     const core = await contract.getCore(gpid);
     const meta = await contract.getMeta(gpid);
 
@@ -81,8 +111,8 @@ app.get("/verify", async (req, res) => {
     res.send(`
       <html>
         <body style="font-family:Arial;padding:40px;background:#1a0b0b;color:#fff">
-          <h1>❌ Product Not Found</h1>
-          <p>This GPID is not registered on ASJUJ Network.</p>
+          <h1>❌ Verifier Error</h1>
+          <pre>${e.message}</pre>
         </body>
       </html>
     `);
@@ -91,6 +121,4 @@ app.get("/verify", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log("ASJUJ Verifier running on port", PORT);
-  console.log("RPC:", RPC_URL);
-  console.log("Contract:", CONTRACT_ADDRESS);
 });
