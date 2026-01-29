@@ -7,11 +7,11 @@ import { ethers } from "ethers";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ===== CONFIG (HARDCODED FOR DEMO) =====
+// ===== CONFIG =====
 const RPC_URL = "https://polygon-amoy.g.alchemy.com/v2/jyVOlegRibEBpVE-2bOHV";
 const CONTRACT_ADDRESS = "0xF8b9d16B11aE782ACe9519711c4F1101d6c9EB3a";
 
-// Load ABI safely
+// Load ABI
 const abiPath = path.join(__dirname, "abi", "TaaSProductBirth.json");
 const abiJson = JSON.parse(fs.readFileSync(abiPath, "utf8"));
 const ABI = abiJson.abi ?? abiJson;
@@ -32,7 +32,7 @@ app.get("/", (req, res) => {
         <h1>ASJUJ Trust Network</h1>
         <p>Verify any ASJUJ product by GPID:</p>
         <form method="GET" action="/verify">
-          <input name="gpid" placeholder="TAAS-LIVE-9005" style="padding:10px;font-size:16px"/>
+          <input name="gpid" placeholder="ASJUJ-REAL-0001" style="padding:10px;font-size:16px"/>
           <button style="padding:10px 16px;font-size:16px">Verify</button>
         </form>
       </body>
@@ -42,30 +42,36 @@ app.get("/", (req, res) => {
 
 app.get("/verify", async (req, res) => {
   const gpid = (req.query.gpid || "").trim();
-
-  if (!gpid) {
-    return res.send("<h2>Invalid GPID</h2>");
-  }
+  if (!gpid) return res.send("<h2>Invalid GPID</h2>");
 
   try {
-    const data = await contract.getProduct(gpid);
+    const core = await contract.getCore(gpid);
+    const meta = await contract.getMeta(gpid);
 
-    if (!data || data.gpid === "") {
-      throw new Error("NOT_FOUND");
-    }
+    const product = {
+      gpid: core[0],
+      brand: core[1],
+      model: core[2],
+      category: core[3],
+      factory: core[4],
+      batch: core[5],
+      bornAt: meta[0],
+      issuer: meta[1],
+      hash: meta[2],
+    };
 
     res.send(`
       <html>
         <body style="font-family:Arial;padding:40px;background:#0b0f1a;color:#fff">
           <h1>✔ ASJUJ Verified Product</h1>
-          <p><b>GPID:</b> ${data.gpid}</p>
-          <p><b>Brand:</b> ${data.brand}</p>
-          <p><b>Model:</b> ${data.model}</p>
-          <p><b>Category:</b> ${data.category}</p>
-          <p><b>Factory:</b> ${data.factory}</p>
-          <p><b>Batch:</b> ${data.batch}</p>
-          <p><b>Issuer:</b> ${data.issuer}</p>
-          <p><b>Born:</b> ${new Date(Number(data.timestamp) * 1000).toUTCString()}</p>
+          <p><b>GPID:</b> ${product.gpid}</p>
+          <p><b>Brand:</b> ${product.brand}</p>
+          <p><b>Model:</b> ${product.model}</p>
+          <p><b>Category:</b> ${product.category}</p>
+          <p><b>Factory:</b> ${product.factory}</p>
+          <p><b>Batch:</b> ${product.batch}</p>
+          <p><b>Issuer:</b> ${product.issuer}</p>
+          <p><b>Born:</b> ${new Date(Number(product.bornAt) * 1000).toUTCString()}</p>
           <hr/>
           <p style="color:#4cff4c">Authentic product on ASJUJ Network</p>
         </body>
